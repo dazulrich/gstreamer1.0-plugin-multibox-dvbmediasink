@@ -82,6 +82,16 @@ typedef struct video_codec_data
 #define VIDEO_SET_CODEC_DATA _IOW('o', 80, video_codec_data_t)
 #endif
 
+#if defined(AZBOX)
+#define VIDEO_RESET_STC                	_IO('o', 81)
+#define VIDEO_STC_PLAY			_IO('o', 82)
+#define VIDEO_STC_STOP			_IO('o', 83)
+#define VIDEO_FFW			_IO('o', 84)
+#define VIDEO_FBW			_IO('o', 85)
+#define VIDEO_DIVX			_IO('o', 86)
+#define VIDEO_MPEG4_PACKED		_IO('o', 87)
+#endif
+
 #ifdef DREAMBOX
 static int readMpegProc(const char *str, int decoder)
 {
