@@ -911,6 +911,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 					video_fd = -1;
 				}
 				self->rate = rate;
+#endif
 			}
 		}
 		break;
