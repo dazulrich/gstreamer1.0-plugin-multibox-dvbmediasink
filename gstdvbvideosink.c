@@ -380,7 +380,7 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 #else
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
-#end
+#endif
 }
 
 static void gst_dvbvideosink_dispose(GObject *obj)
