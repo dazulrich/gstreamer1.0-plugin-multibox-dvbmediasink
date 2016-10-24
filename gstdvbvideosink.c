@@ -893,7 +893,7 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 				break;
 			}
 		}
-#if defined(AZBOX1) //todo: check if above flag can be used ok to keep code cleaner
+#if defined(AZBOX) //todo: check if above flag can be used ok to keep code cleaner
 	self->must_pack_bitstream = FALSE;
 #endif
 	}
