@@ -128,7 +128,7 @@ struct _GstDVBVideoSink
 	gint8 ok_to_write;
 
 	queue_entry_t *queue;
-#ifdef AZBOX 
+#if defined(AZBOX) || defined(AZBOXHD)
 	gboolean check_if_packed_bitstream; 
 #endif 
 };

@@ -12,24 +12,13 @@ This is the one I use in openpli with the modern openembedded-oe-core.
 
 How to use :
 
-For dreambox machines (dm8000 and dm800se) add --with-dreambox to DVBMEDIASINK_CONFIG.
-For vuplus machines add --with-vuplus .
-For dags machines add --with-dags.
-Some xtrend boxes need a max pcm rate off 48000.
-For those boxes add --with-max-pcmrate-48K
-
-For azbox machines add --with-azbox.
+This fork of the dvbmediasink was amended for use with Azbox machines only!
+It is based on git://github.com/christophecvr/gstreamer1.0-plugin-multibox-dvbmediasink
+ 
+For Azbox machines add --with-azbox.
+Some Images supporting AzboxHD machines add --with-azboxhd. (E.g. in HDMU image)
 
 Examples configs :
 
-dreambox dm800se : DVBMEDIASINK_CONFIG = "--with-dreambox --with-pcm --with-wma --with-wmv --with-dtsdownmix --with-eac3"
-dreambox dm8000  : DVBMEDIASINK_CONFIG = "--with-dreambox --with-pcm --with-wma --with-wmv --with-dtsdownmix --with-eac3 --with-amr --with-limited-mpeg4v2"
-vuplus           : DVBMEDIASINK_CONFIG = "--with-vuplus --with-pcm --with-eac3 --with-amr --with-wmv"
-
-Note since 17032015 vuplus added new drivers.
-SRCDATE = "20150317"
-
-For all boxes with drivers from that date or above the --with-vuplus option is not required anymore.
-Then the dvbmediasink config for vuplus must be.
-vuplus           : DVBMEDIASINK_CONFIG = "--with-pcm --with-eac3 --with-amr --with-wmv"
-
+Default for all Azbox : DVBMEDIASINK_CONFIG = "--with-wma --with-wmv --with-pcm --with-dtsdownmix --with-azbox"
+AzboxHD for some Images  : DVBMEDIASINK_CONFIG = "--with-wma --with-wmv --with-pcm --with-dtsdownmix --with-azboxhd"

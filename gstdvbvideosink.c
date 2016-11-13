@@ -80,7 +80,7 @@ typedef struct video_codec_data
 #define VIDEO_SET_CODEC_DATA _IOW('o', 80, video_codec_data_t)
 #endif
 
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 #define VIDEO_RESET_STC                	_IO('o', 81)
 #define VIDEO_STC_PLAY			_IO('o', 82)
 #define VIDEO_STC_STOP			_IO('o', 83)
@@ -279,7 +279,7 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 	self->rate = 1.0;
 	self->wmv_asf = FALSE;
 
-#ifdef AZBOX
+#if defined(AZBOX) || defined(AZBOXHD)
 	self->check_if_packed_bitstream = FALSE;
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
@@ -471,7 +471,7 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 			self->timestamp_offset = start - pos;
 			if (rate != self->rate)
 			{
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 				int skip = 0;
 				skip = (int)rate;				
 				if (rate > 1.0)
@@ -1197,7 +1197,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					const char *profile_str[] = { "baseline", "main", "extended", "high" };
 					memcpy(tmp, "\x00\x00\x00\x01", 4);
 					tmp_len += 4;
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 					memcpy(tmp + tmp_len, data + 8, len);
 #else
 					memcpy(tmp + tmp_len, data + 8, len);
@@ -1361,7 +1361,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 			case 3:
 			case 43:
 			{
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 				gint height, width;
 				guint divxdata = 0;
 				gst_structure_get_int (structure, "height", &height);
@@ -1518,7 +1518,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					data = map.data;
 					data += 8;
 					if (codec_data && codec_size) memcpy(data , codec_data_pointer, codec_size);
-#elif defined(AZBOX)
+#elif defined(AZBOX) || defined(AZBOXHD)
 					//self->codec_data = gst_buffer_new_and_alloc(codec_size);
 					memcpy(data, codec_data_pointer, codec_size);
 					//gint codec_size = GST_BUFFER_SIZE(gst_value_get_buffer(codec_data));
@@ -1656,14 +1656,14 @@ static gboolean gst_dvbvideosink_stop(GstBaseSink *basesink)
 	{
 		if (self->playing)
 		{
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 			ioctl(self->fd, VIDEO_STC_STOP); //openazbox
 #else 
 			ioctl(self->fd, VIDEO_STOP);
 #endif
 			self->playing = FALSE;
 		}
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 		self->rate = 1.0;
 #else
 		if (self->rate != 1.0)
@@ -1736,7 +1736,7 @@ static GstStateChangeReturn gst_dvbvideosink_change_state(GstElement *element, G
 		if (self->fd >= 0)
 		{
 			ioctl(self->fd, VIDEO_SELECT_SOURCE, VIDEO_SOURCE_MEMORY);
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 			ioctl(self->fd, VIDEO_RESET_STC); // Openazbox: VIDEO_RESET_STC
 #else
 			ioctl(self->fd, VIDEO_FREEZE); 
@@ -1747,7 +1747,7 @@ static GstStateChangeReturn gst_dvbvideosink_change_state(GstElement *element, G
 		break;
 	case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
 		GST_INFO_OBJECT (self,"GST_STATE_CHANGE_PAUSED_TO_PLAYING");
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 		if (self->fd >= 0 && self->paused) ioctl(self->fd, VIDEO_STC_PLAY); // Openazbox: VIDEO_STC_PLAY
 #else
 		if (self->fd >= 0 && self->paused) ioctl(self->fd, VIDEO_CONTINUE);
@@ -1766,7 +1766,7 @@ static GstStateChangeReturn gst_dvbvideosink_change_state(GstElement *element, G
 	case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
 		GST_INFO_OBJECT (self,"GST_STATE_CHANGE_PLAYING_TO_PAUSED");
 		self->paused = TRUE;
-#if defined(AZBOX)
+#if defined(AZBOX) || defined(AZBOXHD)
 		if (self->fd >= 0) ioctl(self->fd, VIDEO_STC_STOP); // Openazbox: VIDEO_STC_STOP
 #else
 		if (self->fd >= 0) ioctl(self->fd, VIDEO_FREEZE); 

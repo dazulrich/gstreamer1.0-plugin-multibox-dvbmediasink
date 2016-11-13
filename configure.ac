@@ -264,6 +264,13 @@ if test "$azbox" = "yes"; then
 	AC_DEFINE([AZBOX],[1],[build for azbox, yes or no ])
 fi
 
+AC_ARG_WITH(azboxhd,
+	AS_HELP_STRING([--with-azboxhd],[build for azboxhd, yes or no]),
+	[azboxhd=$withval],[azboxhd=no])
+if test "$azboxhd" = "yes"; then
+	AC_DEFINE([AZBOXHD],[1],[build for azboxhd, yes or no ])
+fi
+
 DTS_LIBS="-ldca $LIBM"
 AC_SUBST(DTS_LIBS)
 AM_CONDITIONAL(HAVE_DTSDOWNMIX, test "$have_dtsdownmix" = "yes")
