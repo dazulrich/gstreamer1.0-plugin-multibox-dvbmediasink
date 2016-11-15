@@ -505,7 +505,11 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					}
 					else
 					{
+#if defined(AZBOX) || defined(AZBOXHD)
+						gint rate, channels, rate_idx = 0, obj_type = 2; // Set hardcoded value to LC profile as this is supported by hardware. MAIN profile needs software decoding support installed, like libav)
+#else
 						gint rate, channels, rate_idx = 0, obj_type = 1; // hardcoded yet.. hopefully this works every time ;)
+#endif
 						GST_INFO_OBJECT(self, "no codec data");
 						if (gst_structure_get_int(structure, "rate", &rate) && gst_structure_get_int(structure, "channels", &channels))
 						{
