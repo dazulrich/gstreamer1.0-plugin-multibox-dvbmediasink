@@ -1197,7 +1197,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					const char *profile_str[] = { "baseline", "main", "extended", "high" };
 					memcpy(tmp, "\x00\x00\x00\x01", 4);
 					tmp_len += 4;
-#if defined(AZBOX) || defined(AZBOXHD)
+#if defined(AZBOX1) || defined(AZBOXHD1)
 					memcpy(tmp + tmp_len, data + 8, len);
 #else
 					memcpy(tmp + tmp_len, data + 8, len);
