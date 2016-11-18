@@ -1094,8 +1094,9 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 	const char *mimetype = gst_structure_get_name (structure);
 	t_stream_type prev_stream_type = self->stream_type;
 	self->stream_type = STREAMTYPE_UNKNOWN;
-	//self->must_send_header = TRUE;
-
+#if defined(AZBOX) || defined(AZBOXHD)
+	self->must_send_header = TRUE;
+#endif
 	GST_INFO_OBJECT (self, "caps = %" GST_PTR_FORMAT, caps);
 
 	if (self->codec_data)
@@ -1125,8 +1126,8 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 			case 4:
 			{
 				self->stream_type = STREAMTYPE_MPEG4_Part2;
-				self->check_if_packed_bitstream = TRUE;
-/*				guint32 fourcc = 0;
+/*				self->check_if_packed_bitstream = TRUE; //commented last leftover of PB
+				guint32 fourcc = 0;
 				const gchar *value = gst_structure_get_string(structure, "fourcc");
 				if (value)
 					fourcc = GST_STR_FOURCC(value);
