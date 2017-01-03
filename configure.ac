@@ -271,6 +271,22 @@ if test "$azboxhd" = "yes"; then
 	AC_DEFINE([AZBOXHD],[1],[build for azboxhd, yes or no ])
 fi
 
+AC_ARG_WITH(machine,
+	AS_HELP_STRING([--with-machine],[build for machine, $withval]),
+	[machine=$withval],[machine=generic])
+AC_SUBST(machine)
+AC_DEFINE_UNQUOTED(machine,"$machine",[machine])
+if test `echo "$machine" | cut -b 1-2` == "dm"; then
+	AC_DEFINE([DREAMBOX],[1],[build for DREAMBOX ])
+fi
+if test `echo "$machine" | cut -b 1-2` == "vu"; then
+	AC_DEFINE([VUPLUS],[1],[build for VUPLUS ])
+	AC_DEFINE([TYPE2],[1],[build bybass TYPE2])
+fi
+if [ test "$machine" = "azboxme" || test "$machine" = "azboxminime" ]; then
+	AC_DEFINE([AZBOX],[1],[build for AZBOX ME/ miniME ])
+fi
+
 DTS_LIBS="-ldca $LIBM"
 AC_SUBST(DTS_LIBS)
 AM_CONDITIONAL(HAVE_DTSDOWNMIX, test "$have_dtsdownmix" = "yes")
