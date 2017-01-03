@@ -296,7 +296,7 @@ static void gst_dvbaudiosink_init(GstDVBAudioSink *self)
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
 #else
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
-	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
+	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), TRUE);
 #endif
 }
 
@@ -841,20 +841,20 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 
 			if (pfd[0].revents & POLLIN)
 			{
-				GST_DEBUG_OBJECT(self, "wait EOS aborted!!\n");
+				GST_INFO_OBJECT(self, "wait EOS aborted!!\n");
 				ret = FALSE;
 				break;
 			}
 
 			if (pfd[1].revents & POLLIN)
 			{
-				GST_DEBUG_OBJECT(self, "got buffer empty from driver!\n");
+				GST_INFO_OBJECT(self, "got buffer empty from driver!\n");
 				break;
 			}
 
 			if (sink->flushing)
 			{
-				GST_DEBUG_OBJECT(self, "wait EOS flushing!!\n");
+				GST_INFO_OBJECT(self, "wait EOS flushing!!\n");
 				ret = FALSE;
 				break;
 			}
@@ -943,8 +943,6 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 	}
 	if (ret) 
 		ret = GST_BASE_SINK_CLASS(parent_class)->event(sink, event);
-	else 
-		gst_event_unref(event);
 
 	return ret;
 }

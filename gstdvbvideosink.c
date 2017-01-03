@@ -283,7 +283,7 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 #if defined(AZBOX) || defined(AZBOXHD)
 	self->check_if_packed_bitstream = FALSE;
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
-	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
+	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), TRUE);
 #else
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
@@ -540,8 +540,7 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 	}
 	if (ret)
 		ret = GST_BASE_SINK_CLASS(parent_class)->event(sink, event);
-	else
-		gst_event_unref;
+
 	return ret;
 }
 
