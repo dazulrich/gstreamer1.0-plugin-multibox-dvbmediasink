@@ -782,7 +782,7 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 			GST_TRACE_OBJECT(self, "data[%d] = %d :(", i, data[i]);
 	}
 
-	if (self->check_if_packed_bitstream)  
+/*	if (self->check_if_packed_bitstream)  
 	{  
 		int tmp1, tmp2;  
 		unsigned char c1, c2;  
@@ -805,7 +805,7 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 		}  
 	self->check_if_packed_bitstream = FALSE;  
 	} 
-
+*/
 	pes_header[0] = 0;
 	pes_header[1] = 0;
 	pes_header[2] = 1;
