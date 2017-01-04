@@ -282,8 +282,8 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 
 #if defined(AZBOX) || defined(AZBOXHD)
 	self->check_if_packed_bitstream = FALSE;
-	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
-	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), TRUE);
+	gst_base_sink_set_sync(GST_BASE_SINK(self), TRUE);
+	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
 #else
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
