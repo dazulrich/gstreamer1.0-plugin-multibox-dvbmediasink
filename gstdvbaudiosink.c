@@ -943,6 +943,8 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 	}
 	if (ret) 
 		ret = GST_BASE_SINK_CLASS(parent_class)->event(sink, event);
+	else
+		gst_event_unref(event);
 
 	return ret;
 }
