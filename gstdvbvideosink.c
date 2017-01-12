@@ -782,30 +782,6 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 			GST_TRACE_OBJECT(self, "data[%d] = %d :(", i, data[i]);
 	}
 
-/*	if (self->check_if_packed_bitstream)  
-	{  
-		int tmp1, tmp2;  
-		unsigned char c1, c2;  
-		unsigned int pos = 0;  
-		while (pos < data_len)  
-		{  
-			if (memcmp(&data[pos], "\x00\x00\x01\xb2", 4))  
-			{  
-				pos++;  
-				continue;  
-			}  
-			pos += 4;  
-			if (data_len - pos < 13) break;  
-			if (sscanf((char*)data+pos, "DivX%d%c%d%cp", &tmp1, &c1, &tmp2, &c2) == 4 && (c1 == 'b' || c1 == 'B') && (c2 == 'p' || c2 == 'P'))   
-			{  
-				GST_INFO_OBJECT (self, "%s seen.... already packed!", (char*)data+pos);  
-				ioctl(self->fd,  VIDEO_MPEG4_PACKED);  
-				break;  
-			}  
-		}  
-	self->check_if_packed_bitstream = FALSE;  
-	} 
-*/
 	pes_header[0] = 0;
 	pes_header[1] = 0;
 	pes_header[2] = 1;
@@ -1126,20 +1102,6 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 			case 4:
 			{
 				self->stream_type = STREAMTYPE_MPEG4_Part2;
-/*				self->check_if_packed_bitstream = TRUE; //commented last leftover of PB
-				guint32 fourcc = 0;
-				const gchar *value = gst_structure_get_string(structure, "fourcc");
-				if (value)
-					fourcc = GST_STR_FOURCC(value);
-				switch (fourcc)
-				{
-					case GST_MAKE_FOURCC('R', 'M', 'P', '4'):
-					case GST_MAKE_FOURCC('x', 'v', 'i', 'd'):
-					case GST_MAKE_FOURCC('X', 'V', 'I', 'D'):
-					self->stream_type = STREAMTYPE_XVID;
-					break;
-				} 
-*/
 				const GValue *codec_data = gst_structure_get_value(structure, "codec_data");
 				if (codec_data)
 				{
@@ -1415,16 +1377,6 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 			}
 			break;
 			case 4:
-/*				self->stream_type = STREAMTYPE_MPEG4_Part2;
-				self->codec_type = CT_MPEG4_PART2;
-				const GValue *codec_data = gst_structure_get_value(structure, "codec_data");
-				if (codec_data)
-				{
-					self->codec_data = gst_value_get_buffer(codec_data);
-					gst_buffer_ref (self->codec_data);
-				}
-				GST_INFO_OBJECT (self, "MIMETYPE video/x-divx vers. 4 -> STREAMTYPE_MPEG4_Part2"); 
-*/
 				self->stream_type = STREAMTYPE_DIVX4;
 				self->codec_type = CT_DIVX4;
 				self->codec_data = gst_buffer_new_and_alloc(12);
