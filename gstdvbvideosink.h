@@ -56,6 +56,8 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_DVBVIDEOSINK,GstDVBVideoSink))
 #define GST_DVBVIDEOSINK_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_DVBVIDEOSINK,GstDVBVideoSinkClass))
+#define GST_DVBVIDEOSINK_GET_CLASS(obj) \
+  (G_TYPE_INSTANCE_GET_CLASS ((obj),GST_TYPE_DVBVIDEOSINK,GstDVBVideoSinkClass))
 #define GST_IS_DVBVIDEOSINK(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DVBVIDEOSINK))
 #define GST_IS_DVBVIDEOSINK_CLASS(klass) \
@@ -115,7 +117,6 @@ struct _GstDVBVideoSink
 	GstBuffer *codec_data;
 	t_codec_type codec_type;
 	t_stream_type stream_type;
-
 	gboolean use_dts;
 
 	char saved_fallback_framerate[16];
@@ -123,7 +124,7 @@ struct _GstDVBVideoSink
 	gdouble rate;
 	gboolean playing, paused, flushing, unlocking, flushed, first_paused;
 	gboolean using_dts_downmix;
-	gboolean pts_written;
+	gboolean pts_written, synchronized, pass_eos;
 	gint64 lastpts;
 	gint64 timestamp_offset;
 	gboolean must_send_header, wmv_asf;
