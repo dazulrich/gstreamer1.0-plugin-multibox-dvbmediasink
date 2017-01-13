@@ -1126,7 +1126,7 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 			}
 		}
 	}
-#if defined(VUPLUS) || defined(GIGABLUEMIPS)
+#if defined(VUPLUS) || defined(AZBOX)
  	else if (self->codec_type == CT_VC1 || self->codec_type == CT_VC1_SM)
 #else
 	else if ((self->wmv_asf && self->codec_type == CT_VC1) || self->codec_type == CT_VC1_SM)
