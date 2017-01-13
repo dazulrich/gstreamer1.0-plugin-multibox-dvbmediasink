@@ -1126,7 +1126,7 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 			}
 		}
 	}
-#if defined(VUPLUS) || defined(AZBOX)
+#if defined(VUPLUS) || defined(AZBOX1)
  	else if (self->codec_type == CT_VC1 || self->codec_type == CT_VC1_SM)
 #else
 	else if ((self->wmv_asf && self->codec_type == CT_VC1) || self->codec_type == CT_VC1_SM)
@@ -1586,14 +1586,15 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					gst_buffer_map(gst_value_get_buffer(codec_data), &codecdatamap, GST_MAP_READ);
 					codec_data_pointer = codecdatamap.data;
 					codec_size = codecdatamap.size;
-#if defined(DREAMBOX) || defined(DAGS)
+#if defined(AZBOX1) || defined(DAGS)
 					GstMapInfo map;
 					self->codec_data = gst_buffer_new_and_alloc(8 + codec_size);
 					gst_buffer_map(self->codec_data, &map, GST_MAP_WRITE);
 					data = map.data;
 					data += 8;
+					GST_DEBUG_OBJECT(self, "before memcopy");
 					if (codec_data && codec_size) memcpy(data , codec_data_pointer, codec_size);
-#elif defined(AZBOX) || defined(AZBOXHD)
+#elif defined(AZBOX1) || defined(AZBOXHD)
 					//self->codec_data = gst_buffer_new_and_alloc(codec_size);
 					memcpy(data, codec_data_pointer, codec_size);
 					//gint codec_size = GST_BUFFER_SIZE(gst_value_get_buffer(codec_data));
@@ -1602,14 +1603,17 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 #else
 					videocodecdata.length = 8 + codec_size;
 					data = videocodecdata.data = (guint8*)g_malloc(videocodecdata.length);
+					GST_DEBUG_OBJECT(self, "before memset");
 					memset(data, 0, videocodecdata.length);
 					data += 8;
+					GST_DEBUG_OBJECT(self, "before memcopy");
 					memcpy(data, codec_data_pointer, codec_size);
 					ioctl(self->fd, VIDEO_SET_CODEC_DATA, &videocodecdata);
 					g_free(videocodecdata.data);
 #endif
+					GST_DEBUG_OBJECT(self, "before unmap");
 					gst_buffer_unmap(gst_value_get_buffer(codec_data), &codecdatamap);
-#if defined(DREAMBOX) || defined(DAGS)
+#if defined(AZBOX1) || defined(DAGS)
 					gst_buffer_unmap(self->codec_data, &map);
 #endif
 				}
@@ -1631,7 +1635,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					if (codec_size > 4) codec_size = 4;
 					gst_structure_get_int(structure, "width", &width);
 					gst_structure_get_int(structure, "height", &height);
-#if defined(DREAMBOX) || defined(DAGS)
+#if defined(AZBOX) || defined(DAGS)
 					GstMapInfo map;
 					self->codec_data = gst_buffer_new_and_alloc(18 + codec_size);
 					gst_buffer_map(self->codec_data, &map, GST_MAP_WRITE);
@@ -1664,7 +1668,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					g_free(videocodecdata.data);
 #endif
 					gst_buffer_unmap(gst_value_get_buffer(codec_data), &codecdatamap);
-#if defined(DREAMBOX) || defined(DAGS)
+#if defined(AZBOX) || defined(DAGS)
 					gst_buffer_unmap(self->codec_data, &map);
 #endif
 				}
