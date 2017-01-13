@@ -98,7 +98,11 @@ typedef enum {
 	STREAMTYPE_XVID = 10,
 	STREAMTYPE_DIVX311 = 13,
 	STREAMTYPE_DIVX4 = 14,
-	STREAMTYPE_DIVX5 = 15
+	STREAMTYPE_DIVX5 = 15,
+	STREAMTYPE_VB6 = 18,
+	STREAMTYPE_VB8 = 20,
+	STREAMTYPE_VB9 = 23,
+	STREAMTYPE_SPARK = 21
 } t_stream_type;
 #endif
 
@@ -129,6 +133,8 @@ struct _GstDVBVideoSink
 	gint64 timestamp_offset;
 	gboolean must_send_header, wmv_asf;
 	gint8 ok_to_write;
+
+	gboolean use_set_encoding;
 
 	queue_entry_t *queue;
 #if defined(AZBOX) || defined(AZBOXHD)

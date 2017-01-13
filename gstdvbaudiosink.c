@@ -63,7 +63,11 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
+/* TODO remove
+#ifdef __sh__
+#include <linux/dvb/stm_ioctls.h>
+#endif
+*/
 #include <gst/gst.h>
 #include <gst/audio/audio.h>
 #include <gst/base/gstbasesink.h>
@@ -216,6 +220,37 @@ GST_STATIC_PAD_TEMPLATE(
 	)
 );
 
+/* TODO remove
+#define AUDIO_ENCODING_UNKNOWN  0xFF
+
+t_audio_type bypass_to_encoding (t_audio_type bypass)
+{
+#ifdef AUDIO_SET_ENCODING
+	switch(bypass)
+	{
+	case AUDIOTYPE_AC3:
+	case AUDIOTYPE_AC3_PLUS:
+		return AUDIO_ENCODING_AC3;
+	case AUDIOTYPE_MPEG:
+		return AUDIO_ENCODING_MPEG1;
+	case AUDIOTYPE_DTS:
+		return AUDIO_ENCODING_DTS;
+	case AUDIOTYPE_LPCM:
+		return AUDIO_ENCODING_LPCMA;
+	case AUDIOTYPE_MP3:
+		return AUDIO_ENCODING_MP3;
+	case AUDIOTYPE_AAC_PLUS:
+		return AUDIO_ENCODING_AAC;
+	case AUDIOTYPE_WMA:
+	case AUDIOTYPE_WMA_PRO:
+		return AUDIO_ENCODING_WMA;
+	default:
+		return AUDIO_ENCODING_UNKNOWN;
+	}
+#endif
+	return AUDIO_ENCODING_UNKNOWN;
+}
+*/
 static void gst_dvbaudiosink_init(GstDVBAudioSink *self);
 static void gst_dvbaudiosink_dispose(GObject *obj);
 static void gst_dvbaudiosink_reset(GObject *obj);
@@ -327,12 +362,12 @@ static void gst_dvbaudiosink_init(GstDVBAudioSink *self)
 */
 	if (!strcmp(machine, "hd51") || !strcmp(machine, "gb7356"))
 	{
-		gst_base_sink_set_sync(GST_BASE_SINK(self), TRUE);
+		gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 		gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
 	}
 	else
 	{
-		gst_base_sink_set_sync(GST_BASE_SINK(self), TRUE);
+		gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 		gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
 	}
 
@@ -454,17 +489,16 @@ static void gst_dvbaudiosink_get_property (GObject * object, guint prop_id, GVal
 static gint64 gst_dvbaudiosink_get_decoder_time(GstDVBAudioSink *self)
 {
 	gint64 cur = 0;
-	if (self->fd < 0 || !self->pts_written)
+	if (self->fd < 0 || !self->playing || !self->pts_written)
 		return GST_CLOCK_TIME_NONE;
 
-	if(!self->playing && self->lastpts > 0)
+	/*if(!self->playing && self->lastpts > 0)
 	{
-		//cur = self->lastpts;
-		//cur *= 11111;
-		//cur -= self->timestamp_offset;
-		//return cur;
-		return GST_CLOCK_TIME_NONE;
-	}
+		cur = self->lastpts;
+		cur *= 11111;
+		cur -= self->timestamp_offset;
+		return cur;
+	}*/
 
 	ioctl(self->fd, AUDIO_GET_PTS, &cur);
 	if (cur)
@@ -969,6 +1003,11 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 	case GST_EVENT_EOS:
 	{
 		GST_INFO_OBJECT (self, "GST_EVENT_EOS");
+// TODO remove
+//#ifdef AUDIO_FLUSH
+//		if (self->fd >= 0) ioctl(self->fd, AUDIO_FLUSH, 1/*NONBLOCK*/); //Notify the player that no addionional data will be injected
+//#endif
+//
 		struct pollfd pfd[2];
 		pfd[0].fd = self->unlockfd[0];
 		pfd[0].events = POLLIN;

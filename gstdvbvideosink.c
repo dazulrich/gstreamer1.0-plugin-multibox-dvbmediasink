@@ -183,6 +183,24 @@ GST_STATIC_PAD_TEMPLATE (
 	"video/x-wmv, "
 		VIDEO_CAPS ", wmvversion = (int) 3; "
 #endif
+#ifdef HAVE_SPARK
+	"video/x-flash-video, "
+		VIDEO_CAPS "; "
+#endif
+#ifdef HAVE_VB6
+	"video/x-vp6, "
+		VIDEO_CAPS "; "
+	"video/x-vp6-flash, "
+		VIDEO_CAPS "; "
+#endif
+#ifdef HAVE_VB8
+	"video/x-vp8, "
+		VIDEO_CAPS "; "
+#endif
+#ifdef HAVE_VB9
+	"video/x-vp9, "
+		VIDEO_CAPS "; "
+#endif
 	)
 );
 
@@ -415,17 +433,17 @@ static void gst_dvbvideosink_get_property (GObject * object, guint prop_id, GVal
 static gint64 gst_dvbvideosink_get_decoder_time(GstDVBVideoSink *self)
 {
 	gint64 cur = 0;
-	if (self->fd < 0 || !self->pts_written)
+	if (self->fd < 0 || !self->playing || !self->pts_written)
 		return GST_CLOCK_TIME_NONE;
 
-	if(!self->playing && self->lastpts > 0)
+	/*if(!self->playing && self->lastpts > 0)
 	{
-		//cur = self->lastpts;
-		//cur *= 11111;
-		//cur -= self->timestamp_offset;
-		//return cur;
-		return GST_CLOCK_TIME_NONE;
-	}
+		cur = self->lastpts;
+		cur *= 11111;
+		cur -= self->timestamp_offset;
+		return cur;
+		//return GST_CLOCK_TIME_NONE;
+	}*/
 
 	ioctl(self->fd, VIDEO_GET_PTS, &cur);
 	if (cur)
@@ -1126,7 +1144,7 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 			}
 		}
 	}
-#if defined(VUPLUS) || defined(AZBOX1)
+#if defined(VUPLUS) || defined(AZBOX)
  	else if (self->codec_type == CT_VC1 || self->codec_type == CT_VC1_SM)
 #else
 	else if ((self->wmv_asf && self->codec_type == CT_VC1) || self->codec_type == CT_VC1_SM)
@@ -1458,7 +1476,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 				self->codec_type = CT_DIVX311;
 				GST_INFO_OBJECT (self, "MIMETYPE video/x-divx vers. 3 -> STREAMTYPE_DIVX311");
 #else
-			#define B_GET_BITS(w,e,b)  (((w)>>(b))&(((unsigned)(-1))>>((sizeof(unsigned))*8-(e+1-b))))
+				#define B_GET_BITS(w,e,b)  (((w)>>(b))&(((unsigned)(-1))>>((sizeof(unsigned))*8-(e+1-b))))
 				#define B_SET_BITS(name,v,e,b)  (((unsigned)(v))<<(b))
 				static const guint8 brcm_divx311_sequence_header[] =
 				{
@@ -1635,7 +1653,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					if (codec_size > 4) codec_size = 4;
 					gst_structure_get_int(structure, "width", &width);
 					gst_structure_get_int(structure, "height", &height);
-#if defined(AZBOX) || defined(DAGS)
+#if defined(AZBOX1) || defined(DAGS)
 					GstMapInfo map;
 					self->codec_data = gst_buffer_new_and_alloc(18 + codec_size);
 					gst_buffer_map(self->codec_data, &map, GST_MAP_WRITE);
@@ -1668,7 +1686,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					g_free(videocodecdata.data);
 #endif
 					gst_buffer_unmap(gst_value_get_buffer(codec_data), &codecdatamap);
-#if defined(AZBOX) || defined(DAGS)
+#if defined(AZBOX1) || defined(DAGS)
 					gst_buffer_unmap(self->codec_data, &map);
 #endif
 				}
