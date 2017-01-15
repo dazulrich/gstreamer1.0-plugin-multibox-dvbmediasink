@@ -943,6 +943,11 @@ static GstFlowReturn gst_dvbvideosink_render(GstBaseSink *sink, GstBuffer *buffe
 				if (self->codec_type != CT_MPEG1 && self->codec_type != CT_MPEG2 && (self->codec_type != CT_DIVX4 || data[3] == 0x00))
 //				if (self->codec_type == CT_H264 || self->codec_type == CT_VC1)
 				{
+/*	                                if (self->codec_type == CT_VC1) //Text code from DM sink...
+					{
+                                               codec_data += 1;
+                                               codec_data_len -= 1;
+                                        } */
 					if (self->codec_type == CT_DIVX311)
 					{
 						video_write(sink, self, self->codec_data, 0, codec_data_size);
@@ -1535,12 +1540,14 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 		{
 			self->stream_type = STREAMTYPE_VC1;
 			self->codec_type = CT_VC1;
+			self->use_dts = TRUE; //test dts for WMV
 			GST_INFO_OBJECT (self, "MIMETYPE video/x-wmv %s -> STREAMTYPE_VC1", value);
 		}
 		else
 		{
 			self->stream_type = STREAMTYPE_VC1_SM;
 			self->codec_type = CT_VC1_SM;
+			self->use_dts = TRUE; //test dts for WMV
 			GST_INFO_OBJECT (self, "MIMETYPE video/x-wmv %s -> STREAMTYPE_VC1_SM", value);
 		}
 	}
@@ -1645,7 +1652,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					if (codec_size > 4) codec_size = 4;
 					gst_structure_get_int(structure, "width", &width);
 					gst_structure_get_int(structure, "height", &height);
-#if defined(AZBOX1) || defined(DAGS)
+#if defined(AZBOX) || defined(DAGS)
 					GstMapInfo map;
 					self->codec_data = gst_buffer_new_and_alloc(18 + codec_size);
 					gst_buffer_map(self->codec_data, &map, GST_MAP_WRITE);
@@ -1678,7 +1685,7 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 					g_free(videocodecdata.data);
 #endif
 					gst_buffer_unmap(gst_value_get_buffer(codec_data), &codecdatamap);
-#if defined(AZBOX1) || defined(DAGS)
+#if defined(AZBOX) || defined(DAGS)
 					gst_buffer_unmap(self->codec_data, &map);
 #endif
 				}
