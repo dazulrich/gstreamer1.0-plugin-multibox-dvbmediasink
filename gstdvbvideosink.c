@@ -509,12 +509,12 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 		}
 		self->flushed = TRUE;
 		break;
-/* for GST1.11 (in v6) only
+// for GST1.11 (in v6) only
 	case GST_EVENT_STREAM_GROUP_DONE:
 		GST_INFO_OBJECT (self,"GST_EVENT_STREAM_GROUP_DONE");
 		self->pass_eos = TRUE;
 		break;
-*/
+// end for GST1.11 (in v6) only
 	case GST_EVENT_EOS:
 	{
 		GST_INFO_OBJECT (self, "GST_EVENT_EOS");
