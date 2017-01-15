@@ -415,23 +415,23 @@ static void gst_dvbaudiosink_set_property (GObject * object, guint prop_id, cons
 			if (gst_base_sink_get_sync(GST_BASE_SINK(object)))
 			{
 				GST_INFO_OBJECT(self, "SET gstreamer sync TO TRUE ok");
-				/* the driver should(if the driver support that setting) only synchronize if gstreamer runs sync false mode */
-				if(ioctl(self->fd, AUDIO_SET_AV_SYNC, FALSE) >= 0)
+				// the driver should(if the driver support that setting) only synchronize if gstreamer runs sync false mode 
+				/*if(ioctl(self->fd, AUDIO_SET_AV_SYNC, FALSE) >= 0)
 					GST_INFO_OBJECT(self," AUDIO_SET_AV_SYNC FALSE accepted by driver");
 				else if (self->fd >= 0)
-					GST_ERROR_OBJECT(self,"AUDIO_SET_AV_SYNC FALSE ***NOT*** accepted by driver critical ioctl error");
+					GST_ERROR_OBJECT(self,"AUDIO_SET_AV_SYNC FALSE ***NOT*** accepted by driver critical ioctl error");*/
 				self->synchronized = TRUE;
 			}
 			else
 			{
 				GST_INFO_OBJECT(self, "SET gstreamer sync to FALSE OK");
-				if(ioctl(self->fd, AUDIO_SET_AV_SYNC, TRUE) >= 0)
+				/*if(ioctl(self->fd, AUDIO_SET_AV_SYNC, TRUE) >= 0)
 					GST_INFO_OBJECT(self," AUDIO_SET_AV_SYNC TRUE accepted by driver");
 				else if (self->fd >= 0)
-					GST_ERROR_OBJECT(self,"AUDIO_SET_AV_SYNC TRUE ***NOT*** accepted by driver critical ioctl error");
+					GST_ERROR_OBJECT(self,"AUDIO_SET_AV_SYNC TRUE ***NOT*** accepted by driver critical ioctl error");*/
 				self->synchronized = FALSE;
-				GST_INFO_OBJECT(self, "SET sync to FALSE OK");
 			}
+			//GST_INFO_OBJECT(self, "ignoring attempt to change 'sync' to %s", g_value_get_boolean(value) ? "TRUE" : "FALSE");
 			break;
 		case PROP_ASYNC:
 			gst_base_sink_set_async_enabled(GST_BASE_SINK(object), g_value_get_boolean(value));
@@ -446,7 +446,7 @@ static void gst_dvbaudiosink_set_property (GObject * object, guint prop_id, cons
 				GST_INFO_OBJECT(self, "SET gstreamer async to FALSE OK");
 				self->synchronized = FALSE;
 			}
-			GST_INFO_OBJECT(self, "ignoring attempt to change 'async' to %s", g_value_get_boolean(value) ? "TRUE" : "FALSE");
+			//GST_INFO_OBJECT(self, "ignoring attempt to change 'async' to %s", g_value_get_boolean(value) ? "TRUE" : "FALSE");
 			break;
 		case PROP_RENDER_DELAY:
 			gst_base_sink_set_render_delay(GST_BASE_SINK(object), g_value_get_uint64(value));
@@ -491,14 +491,6 @@ static gint64 gst_dvbaudiosink_get_decoder_time(GstDVBAudioSink *self)
 	gint64 cur = 0;
 	if (self->fd < 0 || !self->playing || !self->pts_written)
 		return GST_CLOCK_TIME_NONE;
-
-	/*if(!self->playing && self->lastpts > 0)
-	{
-		cur = self->lastpts;
-		cur *= 11111;
-		cur -= self->timestamp_offset;
-		return cur;
-	}*/
 
 	ioctl(self->fd, AUDIO_GET_PTS, &cur);
 	if (cur)
@@ -582,7 +574,6 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 	const char *type = gst_structure_get_name(structure);
 	t_audio_type previous_bypass = self->bypass;
 	self->bypass = AUDIOTYPE_UNKNOWN;
-	gboolean was_playing = self->playing;
 
 	self->skip = 0;
 	self->aac_adts_header_valid = FALSE;
@@ -918,7 +909,7 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 
 	GST_INFO_OBJECT(self, "set bypass 0x%02x", self->bypass);
 
-	if (was_playing && self->bypass != previous_bypass)
+	if (self->playing && self->bypass != previous_bypass)
 	{
 		if (self->fd >= 0)
 #if defined(AZBOX) || defined(AZBOXHD)
@@ -933,20 +924,15 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 		GST_ELEMENT_ERROR(self, STREAM, TYPE_NOT_FOUND,(NULL),("hardware decoder can't be set to bypass mode type %s", type));
 		return FALSE;
 	}
-	if(was_playing && self->fd >= 0)
-	{
+
+		if(!self->playing && self->fd >= 0)
 #if defined(AZBOX) || defined(AZBOXHD)
-		ioctl(self->fd, AUDIO_STC_PLAY);  // Openazbox: AUDIO_STC_PLAY
+			ioctl(self->fd, AUDIO_STC_PLAY);  // Openazbox: AUDIO_STC_PLAY
 #else
-		ioctl(self->fd, AUDIO_PLAY);
+			ioctl(self->fd, AUDIO_PLAY);
 #endif
 		self->playing = TRUE;
-		GST_INFO_OBJECT(self, "AUDIO PLAY STARTED ON BY-PASS 0x%02x", self->bypass);
-	}
-	else
-	{
-		GST_INFO_OBJECT(self, "AUDIO READY TO PLAY ON BY-PASS 0x%02x", self->bypass);
-	}
+
 	return TRUE;
 }
 
@@ -1752,7 +1738,7 @@ static GstStateChangeReturn gst_dvbaudiosink_change_state(GstElement *element, G
 			ioctl(self->fd, AUDIO_PAUSE); // used for AzboxHD in HDMU
 #endif
 			/* the driver should(if the driver support that setting) only synchronize if gstreamer runs sync false mode */
-			if(self->synchronized)
+			/*if(self->synchronized)
 			{
 				if(ioctl(self->fd, AUDIO_SET_AV_SYNC, FALSE) >= 0)
 					GST_INFO_OBJECT(self," AUDIO_SET_AV_SYNC FALSE accepted by driver");
@@ -1765,7 +1751,7 @@ static GstStateChangeReturn gst_dvbaudiosink_change_state(GstElement *element, G
 					GST_INFO_OBJECT(self," AUDIO_SET_AV_SYNC TRUE accepted by driver");
 				else
 					GST_ERROR_OBJECT(self,"AUDIO_SET_AV_SYNC TRUE ***NOT*** accepted by driver critical ioctl error");
-			}
+			}*/
 		}
 // dreambox driver issue patch
 #ifdef DREAMBOX
@@ -1775,23 +1761,15 @@ static GstStateChangeReturn gst_dvbaudiosink_change_state(GstElement *element, G
 		break;
 	case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
 		GST_INFO_OBJECT(self,"GST_STATE_CHANGE_PAUSED_TO_PLAYING");
+#ifdef DREAMBOX
 		if(self->using_dts_downmix && self->first_paused)
 		{
+			self->first_paused = FALSE;
 			gst_sleepms(1800);
-			//self->first_paused = FALSE;
 			GST_INFO_OBJECT(self, "USING DTSDOWMIX DELAY START 1800 ms");
 		}
-		if(self->first_paused && self->fd >= 0)
-		{
-			self->playing = TRUE;
-#if defined(AZBOX)
-			ioctl(self->fd, AUDIO_STC_PLAY); //openazbox
-#else
-			ioctl(self->fd, AUDIO_PLAY); // used for AzboxHD in HDMU
 #endif
-			self->first_paused = FALSE;
-		}
-		else if (self->fd >= 0)
+		if (self->fd >= 0)
 #if defined(AZBOX)
 			ioctl(self->fd, AUDIO_STC_PLAY); //openazbox
 #else
