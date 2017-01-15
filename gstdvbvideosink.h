@@ -57,7 +57,7 @@ G_BEGIN_DECLS
 #define GST_DVBVIDEOSINK_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_DVBVIDEOSINK,GstDVBVideoSinkClass))
 #define GST_DVBVIDEOSINK_GET_CLASS(obj) \
-+  (G_TYPE_INSTANCE_GET_CLASS ((obj),GST_TYPE_DVBVIDEOSINK,GstDVBVideoSinkClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj),GST_TYPE_DVBVIDEOSINK,GstDVBVideoSinkClass))
 #define GST_IS_DVBVIDEOSINK(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DVBVIDEOSINK))
 #define GST_IS_DVBVIDEOSINK_CLASS(klass) \
@@ -98,7 +98,11 @@ typedef enum {
 	STREAMTYPE_XVID = 10,
 	STREAMTYPE_DIVX311 = 13,
 	STREAMTYPE_DIVX4 = 14,
-	STREAMTYPE_DIVX5 = 15
+	STREAMTYPE_DIVX5 = 15,
+	STREAMTYPE_VB6 = 18,
+	STREAMTYPE_VB8 = 20,
+	STREAMTYPE_VB9 = 23,
+	STREAMTYPE_SPARK = 21
 } t_stream_type;
 #endif
 
@@ -117,7 +121,6 @@ struct _GstDVBVideoSink
 	GstBuffer *codec_data;
 	t_codec_type codec_type;
 	t_stream_type stream_type;
-
 	gboolean use_dts;
 
 	char saved_fallback_framerate[16];
@@ -130,6 +133,8 @@ struct _GstDVBVideoSink
 	gint64 timestamp_offset;
 	gboolean must_send_header, wmv_asf;
 	gint8 ok_to_write;
+
+	gboolean use_set_encoding;
 
 	queue_entry_t *queue;
 #if defined(AZBOX) || defined(AZBOXHD)

@@ -120,7 +120,7 @@ struct _GstDVBAudioSink
 	int unlockfd[2];
 
 	int skip;
-	int bypass;
+	t_audio_type bypass;
 	int fixed_buffersize;
 	GstClockTime fixed_buffertimestamp;
 	GstClockTime fixed_bufferduration;
@@ -128,11 +128,13 @@ struct _GstDVBAudioSink
 	GstClockTime timestamp;
 	gdouble rate;
 	gboolean playing, paused, flushing, unlocking;
-	gboolean pts_written, synchronized, pass_eos;
+	gboolean pts_written, synchronized, pass_eos, dts_cd;
 	gboolean flushed, using_dts_downmix, first_paused;
 	gint64 lastpts;
 	gint64 timestamp_offset;
 	gint8 ok_to_write;
+
+	gboolean use_set_encoding;
 
 	queue_entry_t *queue;
 };
