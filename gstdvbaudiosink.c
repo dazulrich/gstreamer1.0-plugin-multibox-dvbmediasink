@@ -942,7 +942,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 {
 	GstDVBAudioSink *self = GST_DVBAUDIOSINK(sink);
 	GST_DEBUG_OBJECT(self, "EVENT %s", gst_event_type_get_name(GST_EVENT_TYPE(event)));
-	gboolean ret = TRUE;
+	gboolean ret = TRUE, wait = FALSE;
 
 	switch (GST_EVENT_TYPE(event))
 	{
@@ -1018,6 +1018,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 			else if ((pfd[0].revents & POLLIN) == POLLIN)
 			{
 				GST_INFO_OBJECT(self, "wait EOS aborted!! media is not ended");
+				wait = TRUE;
 				ret = FALSE;
 				break;
 			}
@@ -1025,7 +1026,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 			{
 				GST_INFO_OBJECT(self, "got buffer empty from driver!");
 				/* drivers improved a little fast now with empty buffer adding extra half second wait time */
-				gst_sleepms(500);
+				gst_sleepms(100);
 				break;
 			}
 			else if ((pfd[1].revents & POLLPRI) == POLLPRI)
@@ -1036,6 +1037,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 			else if (sink->flushing)
 			{
 				GST_INFO_OBJECT(self, "wait EOS flushing!!");
+				wait = TRUE;
 				ret = FALSE;
 				break;
 			}
@@ -1135,7 +1137,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 	}
 	if (ret)
 		ret = GST_BASE_SINK_CLASS(parent_class)->event(sink, event);
-	else
+	else if (!wait)
 		gst_event_unref(event);
 
 	return ret;
