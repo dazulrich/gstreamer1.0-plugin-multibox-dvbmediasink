@@ -359,6 +359,7 @@ static void gst_dvbaudiosink_init(GstDVBAudioSink *self)
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
 #endif
+*/
 	// this machine selection is there for now it is just for me now
 	// during test and dev fase.
 	// The goal is to do machine depended difs from out of e2 players in future.
