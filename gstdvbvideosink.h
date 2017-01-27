@@ -67,8 +67,23 @@ typedef struct _GstDVBVideoSink		GstDVBVideoSink;
 typedef struct _GstDVBVideoSinkClass	GstDVBVideoSinkClass;
 typedef struct _GstDVBVideoSinkPrivate	GstDVBVideoSinkPrivate;
 
-typedef enum { CT_MPEG1, CT_MPEG2, CT_H264, CT_DIVX311, CT_DIVX4, CT_MPEG4_PART2, CT_VC1, CT_VC1_SM, CT_H265 } t_codec_type;
-#if defined(VUPLUS) || defined(DREAMBOX)
+typedef enum {
+	CT_UNKNOWN = -1,
+	CT_MPEG1 = 0,
+	CT_MPEG2 = 1,
+	CT_H264 = 2,
+	CT_DIVX311 = 3,
+	CT_DIVX4 = 4,
+	CT_MPEG4_PART2 = 5, 
+	CT_VC1 = 6,
+	CT_VC1_SM = 7,
+	CT_H265 = 8,
+	CT_SPARK = 9,
+	CT_VP6 = 10,
+	CT_VP8 = 11,
+	CT_VP9 = 12
+} t_codec_type;
+#if defined(DREAMBOX)
 typedef enum {
 	STREAMTYPE_UNKNOWN = -1,
 	STREAMTYPE_MPEG2 = 0,
@@ -76,15 +91,20 @@ typedef enum {
 	STREAMTYPE_H263 = 2,
 	STREAMTYPE_MPEG4_Part2 = 4,
 	STREAMTYPE_MPEG1 = 6,
-	STREAMTYPE_MPEG4_H265 = 7,
+	STREAMTYPE_MPEG4_H265 = 22,
 	STREAMTYPE_XVID = 10,
 	STREAMTYPE_DIVX311 = 13,
 	STREAMTYPE_DIVX4 = 14,
 	STREAMTYPE_DIVX5 = 15,
 	STREAMTYPE_VC1 = 16,
-	STREAMTYPE_VC1_SM = 17
+	STREAMTYPE_VC1_SM = 17,
+	STREAMTYPE_VB6 = 18,
+	STREAMTYPE_VB8 = 20,
+	STREAMTYPE_VB9 = 23,
+	STREAMTYPE_SPARK = 21
 } t_stream_type;
-#else
+#endif
+#if defined(TYPE2) && !defined(DREAMBOX)
 typedef enum {
 	STREAMTYPE_UNKNOWN = -1,
 	STREAMTYPE_MPEG2 = 0,
@@ -105,7 +125,27 @@ typedef enum {
 	STREAMTYPE_SPARK = 21
 } t_stream_type;
 #endif
-
+#if !defined(TYPE2) && !defined(DREAMBOX)
+typedef enum {
+	STREAMTYPE_UNKNOWN = -1,
+	STREAMTYPE_MPEG2 = 0,
+	STREAMTYPE_MPEG4_H264 = 1,
+	STREAMTYPE_H263 = 2,
+	STREAMTYPE_VC1 = 3,
+	STREAMTYPE_MPEG4_Part2 = 4,
+	STREAMTYPE_VC1_SM = 5,
+	STREAMTYPE_MPEG1 = 6,
+	STREAMTYPE_MPEG4_H265 = 7,
+	STREAMTYPE_VB8 = 8,
+	STREAMTYPE_VB9 = 9,
+	STREAMTYPE_XVID = 10,
+	STREAMTYPE_DIVX311 = 13,
+	STREAMTYPE_DIVX4 = 14,
+	STREAMTYPE_DIVX5 = 15,
+	STREAMTYPE_VB6 = 18,
+	STREAMTYPE_SPARK = 21
+} t_stream_type;
+#endif
 struct _GstDVBVideoSink
 {
 	GstBaseSink element;
