@@ -351,6 +351,12 @@ static void gst_dvbaudiosink_init(GstDVBAudioSink *self)
 	self->unlockfd[0] = self->unlockfd[1] = -1;
 	self->rate = 1.0;
 	self->timestamp = GST_CLOCK_TIME_NONE;
+#ifdef AUDIO_SET_ENCODING
+	self->use_set_encoding = TRUE;
+#else
+	self->use_set_encoding = FALSE;
+#endif
+
 /* the old way...
 #ifdef VUPLUS
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
@@ -922,12 +928,30 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 #endif
 		self->playing = FALSE;
 	}
+#ifdef AUDIO_SET_ENCODING
+	if (self->use_set_encoding)
+	{
+		unsigned int encoding = bypass_to_encoding(self->bypass);
+		if (self->fd < 0 || ioctl(self->fd, AUDIO_SET_ENCODING, encoding) < 0)
+		{
+			GST_ELEMENT_WARNING(self, STREAM, DECODE,(NULL),("hardware decoder can't be set to encoding %i", encoding));
+		}
+	}
+	else
+	{
+		if (self->fd < 0 || ioctl(self->fd, AUDIO_SET_BYPASS_MODE, self->bypass) < 0)
+		{
+			GST_ELEMENT_ERROR(self, STREAM, TYPE_NOT_FOUND,(NULL),("hardware decoder can't be set to bypass mode type %s", type));
+			return FALSE;
+		}
+	}
+#else
 	if (self->fd < 0 || ioctl(self->fd, AUDIO_SET_BYPASS_MODE, self->bypass) < 0)
 	{
 		GST_ELEMENT_ERROR(self, STREAM, TYPE_NOT_FOUND,(NULL),("hardware decoder can't be set to bypass mode type %s", type));
 		return FALSE;
 	}
-
+#endif
 		if(!self->playing && self->fd >= 0)
 #if defined(AZBOX) || defined(AZBOXHD)
 			ioctl(self->fd, AUDIO_STC_PLAY);  // Openazbox: AUDIO_STC_PLAY
@@ -1006,6 +1030,7 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 
 		int x = 0;
 		int retval = 0;
+		gint64 previous_pts = 0;
 		GST_BASE_SINK_PREROLL_UNLOCK(sink);
 		while (x < 400)
 		{
@@ -1044,14 +1069,26 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 			}
 			else
 			{
-				// the buffer empty not always comes actually mostly does not come
-				// on audio only mediastruct pollfd pfd[2]
-				// That causes an eternal loop and gst blocked pipeline
-				// the main cause off the sandkeeper at whild up on media change.
-				// The loop now takes max 100 seconds.
 				x++;
-				if (x >= 400)
+				if (x >= 600)
 					GST_INFO_OBJECT (self, "Pushing eos to basesink x = %d retval = %d", x, retval);
+				gint64 current_pts = gst_dvbaudiosink_get_decoder_time(self);
+				if(current_pts > 0)
+				{
+					if(previous_pts == current_pts)
+					{
+						GST_INFO_OBJECT(self,"Media ended push eos to basesink current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
+							current_pts, previous_pts);
+						break;
+					}
+					else
+					{
+						GST_DEBUG_OBJECT(self,"poll out current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
+							current_pts, previous_pts);
+						previous_pts = current_pts;
+					}
+				}
+
 			}
 		}
 		GST_BASE_SINK_PREROLL_LOCK(sink);

@@ -204,6 +204,42 @@ GST_STATIC_PAD_TEMPLATE (
 	)
 );
 
+#define VIDEO_ENCODING_UNKNOWN  0xFF
+
+unsigned int streamtype_to_encoding(unsigned int streamtype)
+{
+#ifdef VIDEO_SET_ENCODING
+	switch(streamtype)
+	{
+	case STREAMTYPE_MPEG2:
+		return VIDEO_ENCODING_AUTO;
+	case STREAMTYPE_MPEG4_H264:
+		return VIDEO_ENCODING_H264;
+	case STREAMTYPE_H263:
+		return VIDEO_ENCODING_H263;
+	case STREAMTYPE_MPEG4_Part2:
+		return VIDEO_ENCODING_MPEG4P2;
+	case STREAMTYPE_MPEG1:
+		return VIDEO_ENCODING_AUTO;
+	case STREAMTYPE_XVID:
+		return VIDEO_ENCODING_MPEG4P2;
+	case STREAMTYPE_DIVX311:
+		return VIDEO_ENCODING_MPEG4P2;
+	case STREAMTYPE_DIVX4:
+		return VIDEO_ENCODING_MPEG4P2;
+	case STREAMTYPE_DIVX5:
+		return VIDEO_ENCODING_MPEG4P2;
+	case STREAMTYPE_VC1:
+		return VIDEO_ENCODING_VC1;
+	case STREAMTYPE_VC1_SM:
+		return VIDEO_ENCODING_WMV;
+	default:
+		return VIDEO_ENCODING_UNKNOWN;
+	}
+#endif
+	return VIDEO_ENCODING_UNKNOWN;
+}
+
 static void gst_dvbvideosink_init(GstDVBVideoSink *self);
 static void gst_dvbvideosink_dispose(GObject *obj);
 static void gst_dvbvideosink_reset(GObject *obj);
@@ -304,6 +340,12 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 	self->saved_fallback_framerate[0] = 0;
 	self->rate = 1.0;
 	self->wmv_asf = FALSE;
+#ifdef VIDEO_SET_ENCODING
+	self->use_set_encoding = TRUE;
+#else
+	self->use_set_encoding = FALSE;
+#endif
+
 /* the old way
 #if defined(AZBOX) || defined(AZBOXHD)
 	self->check_if_packed_bitstream = FALSE;
@@ -314,6 +356,8 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
 #endif
 */
+	// machine selcetion only for test now here
+	// In future the goal is to do this setting out of e2 mediaplayers.
 	if (!strcmp(machine, "hd51") || !strcmp(machine, "gb7356"))
 	{
 		gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
@@ -525,8 +569,9 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 		pfd[1].events = POLLIN;
 		int x = 0;
 		int retval = 0;
+		gint64 previous_pts = 0;
 		GST_BASE_SINK_PREROLL_UNLOCK(sink);
- 		while (x < 400)
+ 		while (x < 600)
 		{
 			retval = poll(pfd, 2, 250);
 			if (retval < 0)
@@ -561,13 +606,25 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 			}
 			else
 			{
-				// the buffer empty not always come.
-				// That causes an eternal loop and gst blocked pipeline
-				// the main cause of the sandkeeper at wild up on media change.
-				// The loop now takes max 100 seconds.
 				x++;
-				if (x >= 400)
+				if (x >= 600)
 					GST_INFO_OBJECT (self, "Pushing eos to basesink x = %d retval = %d", x, retval);
+				gint64 current_pts = gst_dvbvideosink_get_decoder_time(self);
+				if(current_pts > 0)
+				{
+					if(previous_pts == current_pts)
+					{
+						GST_INFO_OBJECT(self,"Media ended push eos to basesink current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
+							current_pts, previous_pts);
+						break;
+					}
+					else
+					{
+						GST_DEBUG_OBJECT(self,"poll out current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
+							current_pts, previous_pts);
+						previous_pts = current_pts;
+					}
+				}
 			}
 		}
 		GST_BASE_SINK_PREROLL_LOCK(sink);
