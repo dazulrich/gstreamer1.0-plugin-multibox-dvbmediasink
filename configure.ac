@@ -258,7 +258,7 @@ fi
 if [ test "$machine" = "xc7362" || test "$machine" = "xc7346" ]; then
 	AC_DEFINE([TYPE2],[1],[build bybass TYPE2])
 fi
-if [ test "$machine" = "azboxme" || test "$machine" = "azboxminime" ]; then
+if [ test "$machine" == "azboxme" || test "$machine" == "azboxminime" ]; then
 	AC_DEFINE([AZBOX],[1],[build for AZBOX ME/ miniME ])
 fi
 
