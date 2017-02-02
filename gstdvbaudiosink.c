@@ -1640,7 +1640,7 @@ static gboolean gst_dvbaudiosink_start(GstBaseSink * basesink)
 
 	self->pesheader_buffer = gst_buffer_new_and_alloc(256);
 
-	self->fd = open("/dev/dvb/adapter0/audio0", O_RDWR | O_NONBLOCK);
+	self->fd = open("/dev/dvb/adapter0/audio0", O_RDWR | O_NONBLOCK | O_CLOEXEC);
 
 	self->pts_written = FALSE;
 	self->lastpts = 0;
