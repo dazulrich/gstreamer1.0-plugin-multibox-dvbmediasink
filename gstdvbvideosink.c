@@ -1793,7 +1793,7 @@ static gboolean gst_dvbvideosink_start(GstBaseSink *basesink)
 		f = NULL;
 	}
 
-	self->fd = open("/dev/dvb/adapter0/video0", O_RDWR | O_NONBLOCK | O_CLOEXEC);
+	self->fd = open("/dev/dvb/adapter0/video0", O_RDWR | O_NONBLOCK);
 
 	self->pts_written = FALSE;
 	self->lastpts = 0;
