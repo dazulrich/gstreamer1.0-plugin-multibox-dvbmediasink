@@ -64,6 +64,10 @@
 #include <config.h>
 #endif
 
+#ifdef __sh__
+#include <linux/dvb/stm_ioctls.h>
+#endif
+
 #include <gst/gst.h>
 #include <gst/base/gstbasesink.h>
 
@@ -353,17 +357,8 @@ static void gst_dvbvideosink_init(GstDVBVideoSink *self)
 #else
 	self->use_set_encoding = FALSE;
 #endif
-
-/* the old way
-#if defined(AZBOX) || defined(AZBOXHD)
-	self->check_if_packed_bitstream = FALSE;
 	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
 	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
-#else
-	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
-	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
-#endif
-*/
 }
 
 static void gst_dvbvideosink_dispose(GObject *obj)
@@ -536,15 +531,16 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 		}
 		self->flushed = TRUE;
 		break;
-// for GST1.11 (in v6) only
 	case GST_EVENT_STREAM_GROUP_DONE:
 		GST_INFO_OBJECT (self,"GST_EVENT_STREAM_GROUP_DONE");
 		self->pass_eos = TRUE;
 		break;
-// end for GST1.11 (in v6) only
 	case GST_EVENT_EOS:
 	{
 		GST_INFO_OBJECT (self, "GST_EVENT_EOS");
+#ifdef VIDEO_FLUSH
+		if (self->fd >= 0) ioctl(self->fd, VIDEO_FLUSH, 1/*NONBLOCK*/); //Notify the player that no addionional data will be injected
+#endif
 		struct pollfd pfd[2];
 		pfd[0].fd = self->unlockfd[0];
 		pfd[0].events = POLLIN;
@@ -553,10 +549,13 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 		int x = 0;
 		int retval = 0;
 		gint64 previous_pts = 0;
+		gint64 current_pts = 0;
+		gboolean first_loop_done = FALSE;
 		GST_BASE_SINK_PREROLL_UNLOCK(sink);
- 		while (x < 600)
+ 		while (1)
 		{
-			retval = poll(pfd, 2, 250);
+				retval = poll(pfd, 2, 250);
+
 			if (retval < 0)
 			{
 				GST_INFO_OBJECT(self,"poll in EVENT_EOS");
@@ -570,7 +569,12 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 				ret = FALSE;
 				break;
 			}
-			else if (pfd[1].revents & POLLIN)
+			/* video must first wait up on right playposition before sending eos by driver or position 
+			 * on fast boxes like the 4 K's the eos is send by short media (below buffer video-mem buffer lenght) to early
+			 * The video did not had the time to start playing.
+			 * If the media is long enough which means media lenght bigger then drivers video-mem this issue does not occur
+			*/
+			else if (pfd[1].revents & POLLIN && first_loop_done)
 			{
 				GST_INFO_OBJECT(self, "got buffer empty from driver!");
 				break;
@@ -584,13 +588,16 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 			}
 			else
 			{
-				x++;
-				if (x >= 600)
-					GST_INFO_OBJECT (self, "Pushing eos to basesink x = %d retval = %d", x, retval);
-				gint64 current_pts = gst_dvbvideosink_get_decoder_time(self);
-				if(current_pts > 0)
+				
+				/* max 500 ms needed for 4K stb's for the first loop detection.
+				 * note streamed live media may have an eternal position of 0
+				 * We only will react on empty buffer event for streamed media which remains at zero
+				 * Like usual this is not the case for all live streamed media */
+				current_pts = gst_dvbvideosink_get_decoder_time(self);
+
+				if(current_pts > 0 || x >= 1)
 				{
-					if(previous_pts == current_pts)
+					if(previous_pts == current_pts && current_pts > 0)
 					{
 						GST_INFO_OBJECT(self,"Media ended push eos to basesink current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
 							current_pts, previous_pts);
@@ -598,11 +605,26 @@ static gboolean gst_dvbvideosink_event(GstBaseSink *sink, GstEvent *event)
 					}
 					else
 					{
+						if(previous_pts == 0 && x < 1)
+						{
+							gst_sleepms(500);
+						}						
+						else
+							first_loop_done = TRUE;
 						GST_DEBUG_OBJECT(self,"poll out current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
 							current_pts, previous_pts);
 						previous_pts = current_pts;
+						if(x < 1)
+							x++;
 					}
 				}
+				else if (x < 1)
+				{
+					gst_sleepms(500);
+					x++;
+				}
+				else
+					first_loop_done = TRUE;
 			}
 		}
 		GST_BASE_SINK_PREROLL_LOCK(sink);
@@ -1623,15 +1645,33 @@ static gboolean gst_dvbvideosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 			if (self->fd >= 0)
 			{
 				ioctl(self->fd, VIDEO_STOP, 0);
-				if(ioctl(self->fd, VIDEO_CLEAR_BUFFER) >= 0)
-					GST_INFO_OBJECT(self, "new streamtype VIDEO BUFFER FLUSHED");
+				//if(ioctl(self->fd, VIDEO_CLEAR_BUFFER) >= 0)
+					//GST_INFO_OBJECT(self, "new streamtype VIDEO BUFFER FLUSHED");
 			}
 			self->playing = FALSE;
 		}
+#ifdef VIDEO_SET_ENCODING
+		if (self->use_set_encoding)
+		{
+			unsigned int encoding = streamtype_to_encoding(self->stream_type);
+			if (!self->playing && (self->fd < 0 || ioctl(self->fd, VIDEO_SET_ENCODING, encoding) < 0))
+			{
+				GST_ELEMENT_ERROR(self, STREAM, DECODE, (NULL), ("hardware decoder can't be set to encoding %i", encoding));
+			}
+		}
+		else
+		{
+			if (!self->playing && (self->fd < 0 || ioctl(self->fd, VIDEO_SET_STREAMTYPE, self->stream_type) < 0))
+			{
+				GST_ELEMENT_ERROR(self, STREAM, CODEC_NOT_FOUND, (NULL), ("hardware decoder can't handle streamtype %i", self->stream_type));
+			}
+		}
+#else
 		if (!self->playing && (self->fd < 0 || ioctl(self->fd, VIDEO_SET_STREAMTYPE, self->stream_type) < 0))
 		{
 			GST_ELEMENT_ERROR(self, STREAM, CODEC_NOT_FOUND, (NULL), ("hardware decoder can't handle streamtype %i", self->stream_type));
 		}
+#endif
 		if (self->fd >= 0) 
 		{
 			if (self->codec_type == CT_VC1)
@@ -1797,14 +1837,11 @@ static gboolean gst_dvbvideosink_stop(GstBaseSink *basesink)
 	if (self->fd >= 0)
 	{
 		if (self->playing)
-		{
 #if defined(AZBOX) || defined(AZBOXHD)
 			ioctl(self->fd, VIDEO_STC_STOP); //openazbox
 #else 
 			ioctl(self->fd, VIDEO_STOP);
 #endif
-			self->playing = FALSE;
-		}
 #if defined(AZBOX) || defined(AZBOXHD)
 		self->rate = 1.0;
 #else

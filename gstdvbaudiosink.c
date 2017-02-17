@@ -63,11 +63,11 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-/* TODO remove
+
 #ifdef __sh__
 #include <linux/dvb/stm_ioctls.h>
 #endif
-*/
+
 #include <gst/gst.h>
 #include <gst/audio/audio.h>
 #include <gst/base/gstbasesink.h>
@@ -123,7 +123,11 @@ static guint gst_dvbaudiosink_signals[LAST_SIGNAL] = { 0 };
 		"audio/mpeg, " \
 		"mpegversion = (int) { 2, 4 }, " \
 		"profile = (string) lc, " \
-		"stream-format = (string) { raw, adts, adif, loas }, " \
+		"stream-format = (string) { raw, adts, adif }, " \
+		"framed = (boolean) true; " \
+		"audio/mpeg, " \
+		"mpegversion = (int) { 2, 4 }, " \
+		"stream-format = (string) loas, " \
 		"framed = (boolean) true; "
 #else
 #define MPEGCAPS \
@@ -222,7 +226,6 @@ GST_STATIC_PAD_TEMPLATE(
 	)
 );
 
-/* TODO remove
 #define AUDIO_ENCODING_UNKNOWN  0xFF
 
 t_audio_type bypass_to_encoding (t_audio_type bypass)
@@ -252,7 +255,7 @@ t_audio_type bypass_to_encoding (t_audio_type bypass)
 #endif
 	return AUDIO_ENCODING_UNKNOWN;
 }
-*/
+
 static void gst_dvbaudiosink_init(GstDVBAudioSink *self);
 static void gst_dvbaudiosink_dispose(GObject *obj);
 static void gst_dvbaudiosink_reset(GObject *obj);
@@ -365,16 +368,6 @@ static void gst_dvbaudiosink_init(GstDVBAudioSink *self)
 #else
 	self->use_set_encoding = FALSE;
 #endif
-
-/* the old way...
-#ifdef VUPLUS
-	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
-	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
-#else
-	gst_base_sink_set_sync(GST_BASE_SINK(self), FALSE);
-	gst_base_sink_set_async_enabled(GST_BASE_SINK(self), FALSE);
-#endif
-*/
 	// this machine selection is there for now it is just for me now
 	// during test and dev fase.
 	// The goal is to do machine depended difs from out of e2 players in future.
@@ -621,6 +614,11 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 				if (self->audio_stream_type && !strcmp(self->audio_stream_type, "adts"))
 				{
 					GST_INFO_OBJECT(self, "MIMETYPE %s version %d(AAC-ADTS)", type, mpegversion);
+				}
+				else if (self->audio_stream_type && !strcmp(self->audio_stream_type, "loas"))
+				{
+					self->bypass = AUDIOTYPE_AAC_HE;
+					break;
 				}
 				else
 				{
@@ -917,7 +915,11 @@ static gboolean gst_dvbaudiosink_set_caps(GstBaseSink *basesink, GstCaps *caps)
 		if (self->fd >= 0)
 		{
 			GST_INFO_OBJECT(self,"SAME MEDIA set new bypass 0x%02x", self->bypass);
+#if defined(AZBOX) || defined(AZBOXHD)
+			ioctl(self->fd, AUDIO_STC_STOP, 0); // Openazbox: AUDIO_STC_STOP
+#else
 			ioctl(self->fd, AUDIO_STOP, 0);
+#endif
 			if (ioctl(self->fd, AUDIO_CLEAR_BUFFER) >= 0)
 				GST_DEBUG_OBJECT(self, "NEW_bypass AUDIO BUFFER FLUSHED");
 		}
@@ -1003,20 +1005,15 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 		}
 		self->flushed = TRUE;
 		break;
-// for GST1.11 (in v6) only
 	case GST_EVENT_STREAM_GROUP_DONE:
-		GST_INFO_OBJECT (self,"GST_EVENT_STREAM_GROUP_DONE");
 		self->pass_eos = TRUE;
 		break;
-// end for GST1.11 (in v6) only
 	case GST_EVENT_EOS:
 	{
 		GST_INFO_OBJECT (self, "GST_EVENT_EOS");
-// TODO remove
-//#ifdef AUDIO_FLUSH
-//		if (self->fd >= 0) ioctl(self->fd, AUDIO_FLUSH, 1/*NONBLOCK*/); //Notify the player that no addionional data will be injected
-//#endif
-//
+#ifdef AUDIO_FLUSH
+		if (self->fd >= 0) ioctl(self->fd, AUDIO_FLUSH, 1/*NONBLOCK*/); //Notify the player that no addionional data will be injected
+#endif
 		struct pollfd pfd[2];
 		pfd[0].fd = self->unlockfd[0];
 		pfd[0].events = POLLIN;
@@ -1026,8 +1023,10 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 		int x = 0;
 		int retval = 0;
 		gint64 previous_pts = 0;
+		gint64 current_pts = 0;
+		gboolean first_loop_done = FALSE;
 		GST_BASE_SINK_PREROLL_UNLOCK(sink);
-		while (x < 600)
+		while (1)
 		{
 			retval = poll(pfd, 2, 250);
 			if (retval < 0)
@@ -1043,10 +1042,10 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 				ret = FALSE;
 				break;
 			}
-			else if ((pfd[1].revents & POLLIN) == POLLIN)
+			else if ((pfd[1].revents & POLLIN) == POLLIN && first_loop_done)
 			{
-				GST_INFO_OBJECT(self, "got buffer empty from driver!");
-				break;
+					GST_INFO_OBJECT(self, "got buffer empty from driver!");
+					break;
 			}
 			else if (sink->flushing)
 			{
@@ -1057,13 +1056,16 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 			}
 			else
 			{
-				x++;
-				if (x >= 600)
-					GST_INFO_OBJECT (self, "Pushing eos to basesink x = %d retval = %d", x, retval);
-				gint64 current_pts = gst_dvbaudiosink_get_decoder_time(self);
-				if(current_pts > 0)
+				
+				/* max 500 ms needed for 4K stb's for the first loop detection.
+				 * note streamed live media may have an eternal position of 0
+				 * We only will react on empty buffer event for streamed media which remains at zero
+				 * Like usual this is not the case for all live streamed media */
+				current_pts = gst_dvbaudiosink_get_decoder_time(self);
+
+				if(current_pts > 0 || x >= 1)
 				{
-					if(previous_pts == current_pts)
+					if(previous_pts == current_pts && current_pts > 0)
 					{
 						GST_INFO_OBJECT(self,"Media ended push eos to basesink current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
 							current_pts, previous_pts);
@@ -1071,12 +1073,26 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
 					}
 					else
 					{
+						if(previous_pts == 0 && x < 1)
+						{
+							gst_sleepms(500);
+						}						
+						else
+							first_loop_done = TRUE;
 						GST_DEBUG_OBJECT(self,"poll out current_pts %" G_GINT64_FORMAT " previous_pts %" G_GINT64_FORMAT,
 							current_pts, previous_pts);
 						previous_pts = current_pts;
+						if(x < 1)
+							x++;
 					}
 				}
-
+				else if (x < 1)
+				{
+					gst_sleepms(500);
+					x++;
+				}
+				else
+					first_loop_done = TRUE;
 			}
 		}
 		GST_BASE_SINK_PREROLL_LOCK(sink);
@@ -1101,6 +1117,16 @@ static gboolean gst_dvbaudiosink_event(GstBaseSink *sink, GstEvent *event)
  		if (format == GST_FORMAT_TIME)
 		{
 			self->timestamp_offset = start - pos;
+#if defined(AZBOX) || defined(AZBOXHD)
+			int skip = 0;
+			skip = (int)rate;
+			if (rate > 1.0)
+				ioctl(self->fd, AUDIO_FFW, skip);
+			else if (rate < 1.0)          
+				ioctl(self->fd, AUDIO_FBW, skip);
+			else                    
+				ioctl(self->fd, AUDIO_FFW, skip);
+#endif
 			self->rate = rate;
 		}
 		break;
@@ -1170,6 +1196,9 @@ static int audio_write(GstDVBAudioSink *self, GstBuffer *buffer, size_t start, s
 		{
 			GST_TRACE_OBJECT(self, "going into poll, have %d bytes to write", len - written);
 		}
+#if defined(__sh__) && !defined(CHECK_DRAIN)
+		pfd[1].revents = POLLOUT;
+#else
 		if (poll(pfd, 2, -1) < 0)
 		{
 			GST_INFO_OBJECT(self,"poll(pfd, 2, -1) < 0");
@@ -1177,6 +1206,7 @@ static int audio_write(GstDVBAudioSink *self, GstBuffer *buffer, size_t start, s
 			retval = -1;
 			break;
 		}
+#endif
 		if (pfd[0].revents & POLLIN)
 		{
 			/* read all stop commands */
@@ -1626,20 +1656,8 @@ static gboolean gst_dvbaudiosink_stop(GstBaseSink * basesink)
 		ioctl(self->fd, AUDIO_SELECT_SOURCE, AUDIO_SOURCE_DEMUX);
 		if (ioctl(self->fd, AUDIO_CLEAR_BUFFER) >= 0)
 			GST_INFO_OBJECT(self, "STOP AUDIO BUFFER FLUSHED");
-#if defined(AZBOX) || defined(AZBOXHD)
+#if defined(AZBOX1) || defined(AZBOXHD)
 		self->rate = 1.0;
-#else
-		if (self->rate != 1.0)
-		{
-			int video_fd = open("/dev/dvb/adapter0/video0", O_RDWR);
-			if (video_fd >= 0)
-			{
-				ioctl(video_fd, VIDEO_SLOWMOTION, 0);
-				ioctl(video_fd, VIDEO_FAST_FORWARD, 0);
-				close(video_fd);
-			}
-			self->rate = 1.0;
-		}
 #endif
 		close(self->fd);
 	}
@@ -1739,7 +1757,7 @@ static GstStateChangeReturn gst_dvbaudiosink_change_state(GstElement *element, G
 		if (self->fd >= 0)
 		{
 			ioctl(self->fd, AUDIO_SELECT_SOURCE, AUDIO_SOURCE_MEMORY);
-#if defined(AZBOX)
+#if defined(AZBOX1)
 			ioctl(self->fd, AUDIO_RESET_STC); //Openazbox: AUDIO_RESET_STC
 #else
 			ioctl(self->fd, AUDIO_PAUSE); // used for AzboxHD in HDMU
@@ -1778,7 +1796,7 @@ static GstStateChangeReturn gst_dvbaudiosink_change_state(GstElement *element, G
 #endif
 		if (self->fd >= 0)
 		{
-#if defined(AZBOX)
+#if defined(AZBOX1)
 			ioctl(self->fd, AUDIO_STC_PLAY); //openazbox
 #else
 			ioctl(self->fd, AUDIO_CONTINUE); // used for AzboxHD in HDMU
@@ -1800,7 +1818,7 @@ static GstStateChangeReturn gst_dvbaudiosink_change_state(GstElement *element, G
 		self->paused = TRUE;
 		if (self->fd >= 0)
 		{
-#if defined(AZBOX)
+#if defined(AZBOX1)
 			ioctl(self->fd, AUDIO_STC_STOP); //Openazbox: AUDIO_STC_STOP
 #else
 			ioctl(self->fd, AUDIO_PAUSE); // used for AzboxHD in HDMU
